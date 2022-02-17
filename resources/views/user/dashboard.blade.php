@@ -49,7 +49,10 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="5">No data</td>
+                        <td colspan="5">
+                            <h4 class="secondary-header">No Data</h4>
+                            <hr>
+                        </td>
                     </tr>
                     @endforelse
                 </tbody>
