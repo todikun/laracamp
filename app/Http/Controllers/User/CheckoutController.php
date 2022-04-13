@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
-use App\Models\{Camp, Checkout};
+use App\Models\{Camp, Checkout, Discount};
 use Illuminate\Http\Request;
 use App\Http\Requests\User\Checkout\Store;
 use App\Mail\Checkout\AfterCheckout;
@@ -44,9 +44,9 @@ class CheckoutController extends Controller
             return redirect(route('user.dashboard'));
         }
         return view('checkout.create', 
-        [
-            'camp' => $camp
-        ]);
+            [
+                'camp' => $camp
+            ]);
     }
 
     /**
@@ -71,6 +71,12 @@ class CheckoutController extends Controller
         $user->address = $data['address'];
         $user->save();
 
+        // checkout discount
+        if ($request->discount) {
+            $discount = Discount::whereCode($request->discount)->first();
+            $data['discount_id'] = $discount->id;
+            $data['discount_percentage'] = $discount->percentage;
+        }
         //create checkout
         $checkout = Checkout::create($data);
         $this->getSnapRedirect($checkout); 
@@ -126,9 +132,9 @@ class CheckoutController extends Controller
         //
     }
 
-    public function success()
+    public function success_checkout()
     {
-        return view('checkout.success');
+        return view('checkout.success-checkout');
     }
 
     /**
@@ -141,16 +147,29 @@ class CheckoutController extends Controller
 
         $checkout->midtrans_booking_code = $orderId;
 
-        $transaction_details = [
-            'order_id' => $orderId,
-            'gross_amount' => $price
-        ];
-
         $item_details[] = [
             'id' => $orderId,
             'price' => $price,
             'quantity' => 1,
             'name' => "Payment for {$checkout->Camp->title} camp"
+        ];
+
+        $discountPrice = 0;
+        if ($checkout->Discount) {
+            $discountPrice = $price * $checkout->discount_percentage / 100;
+            $item_details[] = [
+                'id' => $checkout->Discount->code,
+                'price' => -$discountPrice,
+                'quantity' => 1,
+                'name' => "Discount {$checkout->Discount->name} ({$checkout->discount_percentage}%)"
+            ];
+        }
+
+        $total = $price - $discountPrice;
+
+        $transaction_details = [
+            'order_id' => $orderId,
+            'gross_amount' => $total
         ];
 
         $userData = [
@@ -171,7 +190,6 @@ class CheckoutController extends Controller
             'phone' =>$checkout->User->phone,
             'billing_address' => $userData,
             'shipping_address' => $userData
-
         ];
 
         $midtrans_params = [
@@ -183,6 +201,7 @@ class CheckoutController extends Controller
         try {
             $paymentUrl = \Midtrans\Snap::createTransaction($midtrans_params)->redirect_url;
             $checkout->midtrans_url = $paymentUrl;
+            $checkout->total = $total;
             $checkout->save();
 
             return $paymentUrl;
@@ -239,6 +258,6 @@ class CheckoutController extends Controller
         }
 
         $checkout->save();
-        return view('checkout.success');
+        return view('checkout.success-payment');
     }
 }

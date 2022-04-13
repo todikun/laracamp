@@ -25,21 +25,30 @@
                             <tr>
                                 <td>{{$checkout->User->name}}</td>
                                 <td>{{$checkout->Camp->title}}</td>
-                                <td>${{$checkout->Camp->price}}k</td>
+                                <td>
+                                    <strong>
+                                        Rp. {{ $checkout->total }}
+                                    </strong>
+                                    @if ($checkout->discount_id)
+                                        <span class="badge bg-success">
+                                            Disc {{ $checkout->discount_percentage }}%
+                                        </span>
+                                    @endif
+                                </td>
                                 <td>{{$checkout->created_at->format('M d, Y')}}</td>
                                 <td>
                                     <strong>{{$checkout->payment_status}}</strong>
                                 </td>
                                 @empty
-                            <tr>
-                                <td colspan="3">No Camp Registered</td>
-                            </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
+                                <tr>
+                                    <td colspan="3">No Camp Registered</td>
+                                </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
-@endsection
+    @endsection
